@@ -1,0 +1,43 @@
+COMPONENTS & CONNECTIONS
+ESP32 #1
+Vin 5v to 5v Rail on Breadboard
+GND 5v side to Ground on Breadboard
+3V3 to 3v Rail on Breadboard
+GND 3v side to GND 3v side on Breadboard
+
+LED
+Green (data line)  D12
+White (Ground)
+Red (Power Rail 5v)
+
+MICROPHONE
+L/R to Ground (3v side)
+GND to Ground
+VOD to 3v Rail
+WS to D13
+SCK to D14
+SD to D32
+
+CAPACITOR
+Put on 5v Rail after the power connections.  Make sure to put the ground side of the capacitor on the ground rail of the breadboard.
+
+POWER WIRES LINKING TWO BREADBOARDS
+Two female jumper cables on the LED ESP32, two male jumper cables on the second breadboard with the ESP32 linked to the Max98357 I2S linked to microphone.
+
+ESP32#2
+Vin 5v to 5v Rail on Breadboard
+GND 5v side to Ground on Breadboard
+3V3 to 3v Rail on Breadboard
+GND 3v side to GND 3v side on Breadboard
+
+MAX98357 I2S
+Vin to 3v side on breadboard
+GND to Ground on 3v side of breadboard
+BCK (BCLK) connect to GPIO 26
+WS (LRC) connect to GPIO 25
+DOUT (DIN) connect to GPIO 27
+
+SPEAKER
+Positive wire (solid red) to Positive connection on Max98357
+Negative wire (black & red) to ground connection on Max98357
+
