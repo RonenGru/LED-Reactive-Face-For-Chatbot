@@ -1,0 +1,297 @@
+#include <FastLED.h>
+#include <driver/i2s.h>
+#include "BluetoothSerial.h" // Include BluetoothSerial library for Bluetooth Classic
+
+// LED matrix settings
+#define DATA_PIN 12
+#define NUM_LEDS 256
+#define MATRIX_WIDTH 16
+#define MATRIX_HEIGHT 16
+
+CRGB leds[NUM_LEDS];
+
+// I2S Microphone Settings
+#define I2S_WS 13
+#define I2S_SD 32
+#define I2S_SCK 14
+
+bool mouthOpen = false;
+unsigned long lastBlinkTime = 0;
+const unsigned long blinkInterval = 10000; // 10 seconds
+
+BluetoothSerial SerialBT; // Create an instance of BluetoothSerial
+
+bool bluetoothEnabled = true; // Declare and initialize Bluetooth control variable
+
+// Threshold value for triggering mouth animation
+int AUDIO_THRESHOLD = 215; // Adjust the threshold for mouth opening
+
+// Function declarations
+void drawMouthOpen();
+void drawMouthClosed();
+void drawEyesOpen();
+void blinkEyes();
+void clearEyes();
+void lightShow();
+void handleBluetoothCommands(); // Function to handle Bluetooth commands
+
+void setup() {
+  Serial.begin(115200);
+
+  // Initialize Bluetooth Classic
+  SerialBT.begin("SoundReactiveMouth"); // Bluetooth name
+
+  // FastLED setup
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.setBrightness(50);
+  FastLED.clear(); // Clear the LED strip initially
+
+  // Light show at the beginning
+  lightShow();
+
+  // Configure I2S
+  i2s_config_t i2s_config = {
+    .mode = i2s_mode_t(I2S_MODE_MASTER | I2S_MODE_RX),
+    .sample_rate = 16000,
+    .bits_per_sample = i2s_bits_per_sample_t(16),
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+    .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S),
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+    .dma_buf_count = 8,
+    .dma_buf_len = 64,
+    .use_apll = false
+  };
+
+  i2s_pin_config_t pin_config = {
+    .bck_io_num = I2S_SCK,
+    .ws_io_num = I2S_WS,
+    .data_out_num = I2S_PIN_NO_CHANGE,
+    .data_in_num = I2S_SD
+  };
+
+  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
+  i2s_set_pin(I2S_NUM_0, &pin_config);
+  i2s_zero_dma_buffer(I2S_NUM_0);
+
+  Serial.println("Setup complete. Waiting for audio input...");
+}
+
+void loop() {
+  // Handle Bluetooth Classic commands
+  handleBluetoothCommands();
+
+  // Handle sound reactive mouth and eye animation only if Bluetooth is enabled
+  if (bluetoothEnabled) {
+    // Handle sound reactive mouth
+    static int16_t sampleBuffer[128];
+    size_t bytesRead;
+
+    i2s_read(I2S_NUM_0, sampleBuffer, sizeof(sampleBuffer), &bytesRead, portMAX_DELAY);
+
+    if (bytesRead > 0) {
+      int32_t sum = 0;
+      for (size_t i = 0; i < bytesRead / 2; i++) {
+        sum += abs(sampleBuffer[i]);
+      }
+      int32_t average = sum / (bytesRead / 2);
+
+      // Debug output
+      Serial.print("Audio average: ");
+      Serial.println(average);
+
+      // Control the mouth based on audio input
+      if (bluetoothEnabled) {
+        if (average > AUDIO_THRESHOLD) { // Use the defined threshold value
+          Serial.println("Mouth open");
+          mouthOpen = true;
+        } else {
+          Serial.println("Mouth closed");
+          mouthOpen = false;
+        }
+      } else {
+        // If Bluetooth is disabled, keep the mouth closed
+        mouthOpen = false;
+      }
+
+      // Randomly blink eyes less frequently
+      unsigned long currentTime = millis();
+      if (currentTime - lastBlinkTime > blinkInterval) {
+        if (random(100) < 1) {
+          blinkEyes();
+          lastBlinkTime = currentTime;
+        } else {
+          drawEyesOpen();
+        }
+      } else {
+        drawEyesOpen();
+      }
+
+      // Draw mouth
+      if (mouthOpen) {
+        drawMouthOpen();
+      } else {
+        drawMouthClosed();
+      }
+
+      FastLED.show();
+    }
+  }
+}
+
+void lightShow() {
+  // Brief light show before the face is shown
+  for (int i = 0; i < 3; i++) {
+    FastLED.showColor(CRGB::Red);
+    delay(300);
+    FastLED.showColor(CRGB::Green);
+    delay(300);
+    FastLED.showColor(CRGB::Blue);
+    delay(300);
+  }
+}
+
+void drawMouthOpen() {
+  // Clear mouth area
+  for (int y = 9; y < 13; y++) {
+    for (int x = 4; x < 12; x++) {
+      leds[y * MATRIX_WIDTH + x] = CRGB::Black;
+    }
+  }
+
+  // Draw upper lip
+  for (int x = 4; x < 12; x++) {
+    leds[9 * MATRIX_WIDTH + x] = CRGB::Red;
+  }
+
+  // Draw lower lip
+  for (int x = 4; x < 12; x++) {
+    leds[12 * MATRIX_WIDTH + x] = CRGB::Red;
+  }
+}
+
+void drawMouthClosed() {
+  // Clear mouth area
+  for (int y = 9; y < 13; y++) {
+    for (int x = 4; x < 12; x++) {
+      leds[y * MATRIX_WIDTH + x] = CRGB::Black;
+    }
+  }
+
+  // Draw middle lips (dim)
+  CRGB dimRed = CRGB::Red;
+  dimRed.nscale8_video(128); // Set brightness to 50% (128/255)
+  for (int x = 4; x < 12; x++) {
+    leds[10 * MATRIX_WIDTH + x] = dimRed;
+    leds[11 * MATRIX_WIDTH + x] = dimRed;
+  }
+}
+
+void drawEyesOpen() {
+  // Clear eye area
+  clearEyes();
+
+  // Draw open eyes (circles)
+  leds[2 * MATRIX_WIDTH + 4] = CRGB::Blue;
+  leds[2 * MATRIX_WIDTH + 5] = CRGB::Blue;
+  leds[3 * MATRIX_WIDTH + 3] = CRGB::Blue;
+  leds[3 * MATRIX_WIDTH + 6] = CRGB::Blue;
+  leds[4 * MATRIX_WIDTH + 3] = CRGB::Blue;
+  leds[4 * MATRIX_WIDTH + 6] = CRGB::Blue;
+  leds[5 * MATRIX_WIDTH + 4] = CRGB::Blue;
+  leds[5 * MATRIX_WIDTH + 5] = CRGB::Blue;
+
+  leds[2 * MATRIX_WIDTH + 10] = CRGB::Blue;
+  leds[2 * MATRIX_WIDTH + 11] = CRGB::Blue;
+  leds[3 * MATRIX_WIDTH + 9] = CRGB::Blue;
+  leds[3 * MATRIX_WIDTH + 12] = CRGB::Blue;
+  leds[4 * MATRIX_WIDTH + 9] = CRGB::Blue;
+  leds[4 * MATRIX_WIDTH + 12] = CRGB::Blue;
+  leds[5 * MATRIX_WIDTH + 10] = CRGB::Blue;
+  leds[5 * MATRIX_WIDTH + 11] = CRGB::Blue;
+}
+
+void blinkEyes() {
+  // Blink animation: gradually turn off from top to bottom, then turn back on
+  for (int step = 0; step <= 3; step++) {
+    clearEyes();
+    if (step == 0) {
+      // Fully open
+      drawEyesOpen();
+    } else if (step == 1) {
+      // Partially closed
+      leds[2 * MATRIX_WIDTH + 4] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 5] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 10] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 11] = CRGB::Blue;
+    } else if (step == 2) {
+      // Mostly closed
+      leds[3 * MATRIX_WIDTH + 4] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 5] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 10] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 11] = CRGB::Blue;
+    } else if (step == 3) {
+      // Fully closed
+      leds[4 * MATRIX_WIDTH + 4] = CRGB::Blue;
+      leds[4 * MATRIX_WIDTH + 5] = CRGB::Blue;
+      leds[4 * MATRIX_WIDTH + 10] = CRGB::Blue;
+      leds[4 * MATRIX_WIDTH + 11] = CRGB::Blue;
+    }
+    FastLED.show();
+    delay(100); // Adjust delay for blinking speed
+  }
+
+  // Reverse the process to open eyes
+  for (int step = 2; step >= 0; step--) {
+    clearEyes();
+    if (step == 0) {
+      // Fully open
+      drawEyesOpen();
+    } else if (step == 1) {
+      // Mostly closed
+      leds[3 * MATRIX_WIDTH + 4] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 5] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 10] = CRGB::Blue;
+      leds[3 * MATRIX_WIDTH + 11] = CRGB::Blue;
+    } else if (step == 2) {
+      // Partially closed
+      leds[2 * MATRIX_WIDTH + 4] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 5] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 10] = CRGB::Blue;
+      leds[2 * MATRIX_WIDTH + 11] = CRGB::Blue;
+    }
+    FastLED.show();
+    delay(100); // Adjust delay for blinking speed
+  }
+}
+
+void clearEyes() {
+  // Clear eye area
+  for (int y = 2; y < 6; y++) {
+    for (int x = 3; x < 7; x++) {
+      leds[y * MATRIX_WIDTH + x] = CRGB::Black;
+    }
+    for (int x = 9; x < 13; x++) {
+      leds[y * MATRIX_WIDTH + x] = CRGB::Black;
+    }
+  }
+}
+
+// Function to handle Bluetooth commands
+void handleBluetoothCommands() {
+  if (SerialBT.available()) {
+    char incomingChar = SerialBT.read();
+    if (incomingChar == 'o') {
+      // Toggle animation
+      bluetoothEnabled = !bluetoothEnabled;
+      Serial.println(bluetoothEnabled ? "Bluetooth enabled" : "Bluetooth disabled");
+    } else if (incomingChar == 't') {
+      // Receive new threshold value
+      String thresholdStr = SerialBT.readStringUntil('\n');
+      if (thresholdStr.length() > 0) {
+        AUDIO_THRESHOLD = thresholdStr.toInt();
+        Serial.print("New threshold value: ");
+        Serial.println(AUDIO_THRESHOLD);
+      }
+    }
+  }
+}
