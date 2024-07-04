@@ -12,7 +12,7 @@ Red (Power Rail 5v)
 
 MICROPHONE
 L/R to Ground (3v side)
-GND to Ground
+GND to Ground (3v side)
 VOD to 3v Rail
 WS to D13
 SCK to D14
@@ -29,7 +29,6 @@ Vin 5v to 5v Rail on Breadboard
 GND 5v side to Ground on Breadboard
 3V3 to 3v Rail on Breadboard
 GND 3v side to GND 3v side on Breadboard
-
 MAX98357 I2S
 Vin to 3v side on breadboard
 GND to Ground on 3v side of breadboard
@@ -40,4 +39,3 @@ DOUT (DIN) connect to GPIO 27
 SPEAKER
 Positive wire (solid red) to Positive connection on Max98357
 Negative wire (black & red) to ground connection on Max98357
-
