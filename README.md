@@ -41,6 +41,6 @@ We welcome contributions to this project! If you'd like to add features or impro
 **License**
 ----------
 
-This project is licensed under [MIT License](https://opensource.org/licenses/MIT).
+This project is licensed under Apache License:  https://www.apache.org/licenses/LICENSE-2.0
 
 Thanks for sharing your project's details!
