@@ -1,0 +1,27 @@
+#include "AudioTools.h"
+#include "BluetoothA2DPSink.h"
+
+// Define the pins for I2S interface
+#define I2S_BCK 26  // Bit Clock
+#define I2S_WS 25   // Word Select
+#define I2S_DOUT 27 // Data Out
+
+// Declare I2SStream and BluetoothA2DPSink objects
+I2SStream i2s;
+BluetoothA2DPSink a2dp_sink(i2s);
+
+void setup() {
+    // Configure I2S pins
+    auto cfg = i2s.defaultConfig();
+    cfg.pin_bck = I2S_BCK;
+    cfg.pin_ws = I2S_WS;
+    cfg.pin_data = I2S_DOUT;
+    i2s.begin(cfg);
+
+    // Start Bluetooth A2DP sink
+    a2dp_sink.start("Reactive Mouth Speaker");
+}
+
+void loop() {
+    // No action needed in the loop
+}
