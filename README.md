@@ -36,7 +36,7 @@ In this implementation, the face responds to audio inputs by moving its mouth an
 **Contributions**
 ---------------
 
-We welcome contributions to this project! If you'd like to add features or improve the animation, please feel free to fork this repository and submit your changes.
+I welcome contributions to this project! If you'd like to add features or improve the animation, please feel free to fork this repository and submit your changes.
 
 **License**
 ----------
