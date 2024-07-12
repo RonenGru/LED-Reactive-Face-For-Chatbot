@@ -43,4 +43,4 @@ We welcome contributions to this project! If you'd like to add features or impro
 
 This project is licensed under Apache License:  https://www.apache.org/licenses/LICENSE-2.0
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/EUcB4_kCy2Y/0.jpg)](https://www.youtube.com/watch?v=EUcB4_kCy2Y)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/MB5m8CV_g5Y/0.jpg)](https://www.youtube.com/watch?v=MB5m8CV_g5Y)
